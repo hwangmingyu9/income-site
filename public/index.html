@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>수입 기록 전용 사이트 🍀</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
@@ -32,7 +32,7 @@ header {
   cursor: pointer;
 }
 img {
-  pointer-events: none; /* ✅ 이미지가 터치 이벤트를 막지 않게 */
+  pointer-events: none;
 }
 .page {
   display: none;
@@ -51,14 +51,13 @@ img {
   font-weight: 600;
   margin-bottom: 15px;
   transition: all 0.2s ease;
-  cursor: pointer;          /* ✅ 모바일 터치 가능 */
-  user-select: none;        /* ✅ 드래그 방지 */
+  cursor: pointer;
+  user-select: none;
 }
 .card:hover { transform: translateY(-3px); }
 .card.green { background: #00b894; color: #fff; }
 .card.white { background: #fff; color: #00b894; border: 1px solid #00b894; }
 .card.gray { background: #f5f5f5; color: #333; }
-
 footer {
   width: 100%;
   text-align: center;
@@ -103,7 +102,7 @@ footer {
 .day.selected { border: 2px solid #00b894; background: #e9fff7; }
 .day .date { font-weight: 600; font-size: 13px; margin-bottom: 3px; }
 .income { font-size: 12px; color: #00b894; font-weight: 600; white-space: pre-line; line-height: 1.4em; }
-.added { color: #ff0000; } /* 🔴 비비드 레드 */
+.added { color: #ff0000; }
 input {
   width: 92%;
   max-width: 380px;
@@ -151,13 +150,13 @@ input:focus {
 
 <!-- 홈 -->
 <div class="page" id="page-home" style="display:block;">
-  <img src="cloud.png" alt="구름 캐릭터" style="width:230px;margin-bottom:20px;">
+  <img src="cloud.png" style="width:230px;margin-bottom:20px;">
   <div class="card green" role="button" onclick="showPage('page-eats')">쿠팡이츠 / 배민커넥트</div>
   <div class="card white" role="button" onclick="showPage('page-register')">새로운 수익 등록</div>
   <div class="card gray" role="button" onclick="showPage('page-excel')">월별 엑셀 다운로드</div>
 </div>
 
-<!-- 쿠팡배민 -->
+<!-- 쿠팡/배민 -->
 <div class="page" id="page-eats">
   <button class="back-btn" onclick="showPage('page-home')">← 돌아가기</button>
   <h2>📊 쿠팡이츠 / 배민커넥트 수익</h2>
@@ -191,9 +190,10 @@ input:focus {
   <h2>📥 월별 엑셀 다운로드</h2>
   <div class="calendar" id="excel-calendar"></div>
   <div class="history" id="excel-history"><h3>📜 엑셀 저장 히스토리</h3><div id="excelHistoryLog">아직 저장된 기록이 없습니다.</div></div>
-  <div style="display:flex;gap:10px;justify-content:center;margin-top:15px;">
+  <div style="display:flex;gap:10px;justify-content:center;margin-top:15px;flex-wrap:wrap;">
     <button class="card gray" id="downloadExcel" style="flex:1;">엑셀 파일 다운로드</button>
-    <button class="card white" id="deleteExcel" style="flex:1;">기존 엑셀 파일 삭제</button>
+    <button class="card white" id="deleteExcel" style="flex:1;">모든 데이터 초기화</button>
+    <button class="card green" id="deleteSelectedExcel" style="flex:1;">선택 날짜 삭제</button>
   </div>
 </div>
 
@@ -254,12 +254,12 @@ function refreshCalendars(){
   document.getElementById("excelHistoryLog").innerText=`💾 총 ${excelData.length}건 저장되었습니다.`;
 }
 
-// ✅ 쿠팡/배민 등록
+// ✅ 등록
 document.getElementById("saveEats").onclick=()=>{
   const target=window["eats-calendarSel"];
   if(!target){alert("📅 날짜를 먼저 선택해주세요 !");return;}
   const day=target.dataset.daynum;
-  if(eatsData.some(e=>e.day==day)){alert("⚠️ 이미 등록된 날짜입니다. 삭제 후 다시 등록해주세요.");return;}
+  if(eatsData.some(e=>e.day==day)){alert("⚠️ 이미 등록된 날짜입니다.");return;}
   const eats=document.getElementById("eats").value||0;
   const bae=document.getElementById("baemin").value||0;
   const total=Number(eats)+Number(bae);
@@ -269,20 +269,22 @@ document.getElementById("saveEats").onclick=()=>{
   item.dataset.day=day;
   item.innerHTML=`📅 ${day}일 | [쿠팡이츠] ${Number(eats).toLocaleString()}원 [배민커넥트] ${Number(bae).toLocaleString()}원 [합계] ${total.toLocaleString()}원`;
   document.getElementById("eatsHistoryList").prepend(item);
-  alert("✅ 정상적으로 등록 완료되었습니다 !");
   refreshCalendars();
+  alert("✅ 등록 완료!");
 };
 
+// ✅ 삭제
 document.getElementById("deleteEats").onclick=()=>{
   const target=window["eats-calendarSel"];
   if(!target){alert("🗓️ 삭제할 날짜를 선택해주세요 !");return;}
   const day=target.dataset.daynum;
   eatsData=eatsData.filter(e=>e.day!=day);
   document.querySelectorAll(`#eatsHistoryList .history-item`).forEach(i=>{if(i.dataset.day==day)i.remove();});
-  alert("🧹 정상적으로 삭제되었습니다!");
   refreshCalendars();
+  alert("🧹 삭제 완료!");
 };
 
+// ✅ 수익 추가
 document.getElementById("addIncome").onclick=()=>{
   const target=window["income-calendarSel"];
   if(!target){alert("📅 날짜를 먼저 선택해주세요.");return;}
@@ -290,34 +292,52 @@ document.getElementById("addIncome").onclick=()=>{
   const amount=Number(document.getElementById("incomeAmount").value||0);
   const reason=document.getElementById("incomeReason").value||"";
   if(!amount||!reason){alert("💬 금액과 사유를 모두 입력해주세요!");return;}
-  incomeData.push({day,amount});
+  incomeData.push({day,amount,reason});
   const item=document.createElement("div");
   item.classList.add("history-item");item.dataset.day=day;
   item.innerText=`📅 ${day}일 | ${amount.toLocaleString()}원 (${reason})`;
   document.getElementById("historyList").prepend(item);
-  alert("✅ 수익이 정상적으로 추가되었습니다 !");
   refreshCalendars();
+  alert("✅ 추가 완료!");
 };
 
+// ✅ 수익 삭제
 document.getElementById("deleteIncome").onclick=()=>{
   const target=window["income-calendarSel"];
   if(!target){alert("🗓️ 삭제할 날짜를 선택해주세요 !");return;}
   const day=target.dataset.daynum;
   incomeData=incomeData.filter(e=>e.day!=day);
   document.querySelectorAll(`#historyList .history-item`).forEach(i=>{if(i.dataset.day==day)i.remove();});
-  alert("🧹 정상적으로 삭제되었습니다!");
   refreshCalendars();
+  alert("🧹 삭제 완료!");
 };
 
+// ✅ 엑셀 다운로드 (월별 하나만)
 document.getElementById("downloadExcel").onclick=()=>{
-  if(excelData.length===0){alert("⚠️ 저장된 데이터가 없습니다. 먼저 수익을 등록해주세요 !");return;}
+  if(excelData.length===0){alert("⚠️ 저장된 데이터가 없습니다.");return;}
+  const now=new Date();
+  const y=now.getFullYear();
+  const m=String(now.getMonth()+1).padStart(2,'0');
+  const fileName=`${y}.${m}.xlsx`;
   const ws=XLSX.utils.json_to_sheet(excelData);
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"2025년 10월");
-  XLSX.writeFile(wb,"2025.10.xlsx");
-  alert("💾 엑셀 파일이 정상적으로 저장되었습니다!");
+  XLSX.utils.book_append_sheet(wb,ws,`${y}년 ${m}월`);
+  XLSX.writeFile(wb,fileName);
+  alert(`💾 ${fileName} 파일이 생성되었습니다!`);
 };
 
+// ✅ 선택 날짜 엑셀 삭제
+document.getElementById("deleteSelectedExcel").onclick=()=>{
+  const target=window["excel-calendarSel"];
+  if(!target){alert("🗓️ 삭제할 날짜를 선택해주세요 !");return;}
+  const day=target.dataset.daynum;
+  eatsData=eatsData.filter(e=>e.day!=day);
+  incomeData=incomeData.filter(e=>e.day!=day);
+  refreshCalendars();
+  alert(`🧹 ${day}일 수익이 엑셀 데이터에서 삭제되었습니다!`);
+};
+
+// ✅ 전체 초기화
 document.getElementById("deleteExcel").onclick=()=>{
   eatsData=[];incomeData=[];excelData=[];
   refreshCalendars();
