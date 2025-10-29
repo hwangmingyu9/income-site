@@ -17,6 +17,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// ✅ 페이지 전환 (클릭 완벽 작동)
+window.showPage = function (id) {
+  document.querySelectorAll(".page").forEach(p => (p.style.display = "none"));
+  document.getElementById(id).style.display = "block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
 // ✅ 한글 컬렉션
 const coupangRef = collection(db, "쿠팡✅");
 const baeminRef = collection(db, "배민✅");
@@ -61,7 +68,7 @@ onSnapshot(extraRef, snap => {
   updateUI();
 });
 
-// ✅ UI 업데이트 (달력 + 히스토리)
+// ✅ UI 갱신
 function updateUI() {
   const eatsList = document.getElementById("eatsHistoryList");
   const incomeList = document.getElementById("historyList");
@@ -86,7 +93,7 @@ function updateUI() {
     combinedDays[day].baemin = parseInt(e["금액"].replace(/[^\d]/g, "")) || 0;
   });
 
-  // 추가수익
+  // 추가 수익
   extraData.forEach(e => {
     const d = e["등록_날짜"];
     const day = d.split("-")[2];
@@ -116,7 +123,7 @@ function updateUI() {
     incomeList.appendChild(div);
   });
 
-  // 달력 통합 반영
+  // 달력 통합
   makeCalendar("eats-calendar");
   makeCalendar("income-calendar");
 
@@ -124,7 +131,6 @@ function updateUI() {
     const c = combinedDays[day].coupang || 0;
     const b = combinedDays[day].baemin || 0;
     const e = combinedDays[day].extra || 0;
-
     const html = `
       <div class='date'>${day}</div>
       ${c || b ? `<div class='income'>${(c + b).toLocaleString()}원</div>` : ""}
