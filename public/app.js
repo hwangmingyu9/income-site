@@ -15,14 +15,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ✅ 한글 컬렉션 지정
-const coupangRef = collection(db, "쿠팡");
-const baeminRef = collection(db, "배민");
-const extraRef = collection(db, "추가수익");
+// ✅ 한글 컬렉션
+const coupangRef = collection(db, "쿠팡✅");
+const baeminRef = collection(db, "배민✅");
+const extraRef = collection(db, "추가수익✅");
 
 let coupangData = [];
 let baeminData = [];
 let extraData = [];
+
+// ✅ 페이지 이동
+window.showPage = function(id) {
+  document.querySelectorAll(".page").forEach(p => p.style.display = "none");
+  document.getElementById(id).style.display = "block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
 
 // ✅ 달력 생성
 function makeCalendar(id) {
@@ -40,59 +47,41 @@ function makeCalendar(id) {
     cal.appendChild(d);
   }
 }
-
 makeCalendar("eats-calendar");
 makeCalendar("income-calendar");
 
 // ✅ 실시간 반영
-onSnapshot(query(coupangRef, orderBy("day")), (snap) => {
-  coupangData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  refreshCalendar("eats-calendar");
-  updateHistory();
-});
-
-onSnapshot(query(baeminRef, orderBy("day")), (snap) => {
-  baeminData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  refreshCalendar("eats-calendar");
-  updateHistory();
-});
-
-onSnapshot(query(extraRef, orderBy("day")), (snap) => {
-  extraData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  refreshCalendar("income-calendar");
-  updateHistory();
-});
-
-// ✅ 달력 갱신
-function refreshCalendar(id) {
-  const data = id === "eats-calendar" ? [...coupangData, ...baeminData] : extraData;
-  document.querySelectorAll(`#${id} .day`).forEach(c => {
-    const day = c.dataset.daynum;
-    const record = data.filter(e => e.day == day);
-    if (record.length) {
-      const html = record.map(r => `<div class='income'>${r.amount.toLocaleString()}원</div>`).join("");
-      c.innerHTML = `<div class='date'>${day}</div>${html}`;
-    } else {
-      c.innerHTML = `<div class='date'>${day}</div>`;
-    }
+function loadRealtime() {
+  onSnapshot(query(coupangRef, orderBy("day")), snap => {
+    coupangData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    refresh();
+  });
+  onSnapshot(query(baeminRef, orderBy("day")), snap => {
+    baeminData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    refresh();
+  });
+  onSnapshot(query(extraRef, orderBy("day")), snap => {
+    extraData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    refresh();
   });
 }
+loadRealtime();
 
-// ✅ 히스토리 갱신
-function updateHistory() {
-  // 쿠팡/배민 히스토리
+// ✅ 갱신 함수
+function refresh() {
   const eatsList = document.getElementById("eatsHistoryList");
+  const incomeList = document.getElementById("historyList");
   eatsList.innerHTML = "";
-  [...coupangData, ...baeminData].forEach(e => {
+  incomeList.innerHTML = "";
+
+  const allEats = [...coupangData, ...baeminData];
+  allEats.forEach(e => {
     const div = document.createElement("div");
     div.classList.add("history-item");
     div.innerText = `📅 ${e.day}일 | ${e.amount.toLocaleString()}원`;
     eatsList.appendChild(div);
   });
 
-  // 추가 수익 히스토리
-  const incomeList = document.getElementById("historyList");
-  incomeList.innerHTML = "";
   extraData.forEach(e => {
     const div = document.createElement("div");
     div.classList.add("history-item");
@@ -100,15 +89,14 @@ function updateHistory() {
     incomeList.appendChild(div);
   });
 
-  // 총합 계산
-  const total = [...coupangData, ...baeminData, ...extraData].reduce((a, b) => a + Number(b.amount || 0), 0);
+  const total = allEats.concat(extraData).reduce((a, b) => a + (b.amount || 0), 0);
   document.getElementById("monthTotal").innerText = total.toLocaleString();
 }
 
-// ✅ 등록
+// ✅ 등록 / 삭제
 document.getElementById("saveEats").onclick = async () => {
   const sel = window["eats-calendarSel"];
-  if (!sel) return alert("📅 날짜를 선택하세요.");
+  if (!sel) return alert("📅 날짜 선택!");
   const day = Number(sel.dataset.daynum);
   const eats = Number(document.getElementById("eats").value || 0);
   const bae = Number(document.getElementById("baemin").value || 0);
@@ -117,22 +105,21 @@ document.getElementById("saveEats").onclick = async () => {
   alert("✅ 등록 완료!");
 };
 
-// ✅ 삭제
 document.getElementById("deleteEats").onclick = async () => {
   const sel = window["eats-calendarSel"];
-  if (!sel) return alert("🗓️ 삭제할 날짜를 선택하세요.");
+  if (!sel) return alert("🗓️ 삭제할 날짜 선택!");
   const day = Number(sel.dataset.daynum);
   const targets = [...coupangData, ...baeminData].filter(e => e.day == day);
   for (const t of targets) {
-    const refName = coupangData.includes(t) ? "쿠팡" : "배민";
+    const refName = coupangData.includes(t) ? "쿠팡✅" : "배민✅";
     await deleteDoc(doc(db, refName, t.id));
   }
-  alert("🧹 해당 날짜의 수익 삭제 완료!");
+  alert("🧹 삭제 완료!");
 };
 
 document.getElementById("addIncome").onclick = async () => {
   const sel = window["income-calendarSel"];
-  if (!sel) return alert("📅 날짜를 선택하세요.");
+  if (!sel) return alert("📅 날짜 선택!");
   const day = Number(sel.dataset.daynum);
   const amount = Number(document.getElementById("incomeAmount").value || 0);
   const reason = document.getElementById("incomeReason").value || "";
@@ -142,9 +129,9 @@ document.getElementById("addIncome").onclick = async () => {
 
 document.getElementById("deleteIncome").onclick = async () => {
   const sel = window["income-calendarSel"];
-  if (!sel) return alert("🗓️ 삭제할 날짜를 선택하세요.");
+  if (!sel) return alert("🗓️ 삭제할 날짜 선택!");
   const day = Number(sel.dataset.daynum);
   const targets = extraData.filter(e => e.day == day);
-  for (const t of targets) await deleteDoc(doc(db, "추가수익", t.id));
-  alert("🧹 추가 수익 삭제 완료!");
+  for (const t of targets) await deleteDoc(doc(db, "추가수익✅", t.id));
+  alert("🧹 삭제 완료!");
 };
