@@ -4,7 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>수입 기록 전용 사이트 🍀</title>
-<script type="module" src="/app.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js" type="module"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js" type="module"></script>
+
 <style>
 body {
   margin: 0;
@@ -30,7 +32,6 @@ header {
   z-index: 1;
   cursor: pointer;
 }
-img { pointer-events: none; }
 .page {
   display: none;
   width: 92%;
@@ -54,7 +55,6 @@ img { pointer-events: none; }
 .card:hover { transform: translateY(-3px); }
 .card.green { background: #00b894; color: #fff; }
 .card.white { background: #fff; color: #00b894; border: 1px solid #00b894; }
-.card.gray { background: #f5f5f5; color: #333; }
 footer {
   width: 100%;
   text-align: center;
@@ -110,12 +110,6 @@ input {
   font-size: 15px;
   text-align: center;
   background: #fff;
-  transition: 0.2s;
-}
-input:focus {
-  outline: none;
-  border: 1px solid #00b894;
-  box-shadow: 0 0 4px rgba(0, 184, 148, 0.3);
 }
 .history {
   margin-top: 25px;
@@ -125,7 +119,6 @@ input:focus {
   padding: 10px;
   max-height: 180px;
   overflow-y: auto;
-  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 .history h3 {
   margin: 0 0 10px 0;
@@ -142,13 +135,14 @@ input:focus {
 </style>
 </head>
 <body>
+
 <header onclick="showPage('page-home')">수입 기록 전용 사이트 🍀</header>
 
 <!-- 홈 -->
 <div class="page" id="page-home" style="display:block;">
   <img src="cloud.png" style="width:230px;margin-bottom:20px;">
-  <div class="card green" role="button" onclick="showPage('page-eats')">쿠팡이츠 / 배민커넥트</div>
-  <div class="card white" role="button" onclick="showPage('page-register')">새로운 수익 등록</div>
+  <div class="card green" onclick="showPage('page-eats')">쿠팡이츠 / 배민커넥트</div>
+  <div class="card white" onclick="showPage('page-register')">새로운 수익 등록</div>
 </div>
 
 <!-- 쿠팡/배민 -->
@@ -162,10 +156,10 @@ input:focus {
     <button class="card white" id="deleteEats">삭제</button>
   </div>
   <div class="calendar" id="eats-calendar"></div>
-  <div class="history" id="eats-history"><h3>📜 등록 히스토리</h3><div id="eatsHistoryList"></div></div>
+  <div class="history"><h3>📜 등록 히스토리</h3><div id="eatsHistoryList"></div></div>
 </div>
 
-<!-- 새로운 수익 등록 -->
+<!-- 추가 수익 -->
 <div class="page" id="page-register">
   <button class="back-btn" onclick="showPage('page-home')">← 돌아가기</button>
   <h2 style="color:#00b894;">✨ 새로운 수익 등록</h2>
@@ -176,16 +170,144 @@ input:focus {
     <button class="card green" id="addIncome">등록</button>
     <button class="card white" id="deleteIncome">삭제</button>
   </div>
-  <div class="history" id="income-history"><h3>📜 수익 등록 히스토리</h3><div id="historyList"></div></div>
+  <div class="history"><h3>📜 수익 등록 히스토리</h3><div id="historyList"></div></div>
 </div>
 
 <footer>이번 달 합계 : <span id="monthTotal">0</span>원 💰</footer>
-<script>
-window.showPage = function(id){
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC_JssdYuI3Lq8CUJibU2ex9cPRTlJWFSw",
+  authDomain: "income-site-89fcf.firebaseapp.com",
+  projectId: "income-site-89fcf",
+  storageBucket: "income-site-89fcf.firebasestorage.app",
+  messagingSenderId: "645854803885",
+  appId: "1:645854803885:web:1771b066b5b3f9e12d1324"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.style.display='none');
   document.getElementById(id).style.display='block';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+let eatsData=[], incomeData=[];
+function makeCalendar(id){
+  const cal=document.getElementById(id);
+  for(let i=1;i<=31;i++){
+    const d=document.createElement('div');
+    d.classList.add('day');
+    d.dataset.daynum=i;
+    d.innerHTML=`<div class='date'>${i}</div>`;
+    d.onclick=()=>{document.querySelectorAll(`#${id} .day`).forEach(x=>x.classList.remove('selected'));d.classList.add('selected');window[id+'Sel']=d;};
+    cal.appendChild(d);
+  }
+}
+makeCalendar("eats-calendar");
+makeCalendar("income-calendar");
+
+function refreshCalendars(){
+  const combined={};
+  eatsData.forEach(e=>{const d=e.day;combined[d]=(combined[d]||[]);combined[d].push(e.amount);});
+  incomeData.forEach(e=>{const d=e.day;combined[d]=(combined[d]||[]);combined[d].push(`[추가] ${e.amount}`);});
+  ["eats-calendar","income-calendar"].forEach(id=>{
+    document.querySelectorAll(`#${id} .day`).forEach(c=>{
+      const day=c.dataset.daynum;
+      if(combined[day]){
+        const arr=combined[day];
+        let html=`<div class='date'>${day}</div><div class='income'>`;
+        html+=arr.map(v=>{
+          if(typeof v==="string") return `<span class='added'>${v.replace(/\d+/,m=>Number(m).toLocaleString())}원</span>`;
+          else return `${v.toLocaleString()}원`;
+        }).join("<br>");
+        html+="</div>";
+        c.innerHTML=html;
+      } else c.innerHTML=`<div class='date'>${day}</div>`;
+    });
+  });
+}
+
+// ✅ 등록 (쿠팡/배민)
+document.getElementById("saveEats").onclick=async()=>{
+  const target=window["eats-calendarSel"];
+  if(!target){alert("📅 날짜를 먼저 선택해주세요 !");return;}
+  const day=target.dataset.daynum;
+  const eats=parseInt(document.getElementById("eats").value)||0;
+  const bae=parseInt(document.getElementById("baemin").value)||0;
+  const total=eats+bae;
+  const dateText=`${new Date().getFullYear()}-${new Date().getMonth()+1}-${day}`;
+
+  await addDoc(collection(db,"쿠팡✅"),{등록_날짜:dateText,금액:eats});
+  await addDoc(collection(db,"배민✅"),{등록_날짜:dateText,금액:bae});
+
+  eatsData.push({day,amount:total});
+  const item=document.createElement("div");
+  item.classList.add("history-item");
+  item.dataset.day=day;
+  item.innerHTML=`📅 ${day}일 | [쿠팡이츠] ${eats.toLocaleString()}원 [배민커넥트] ${bae.toLocaleString()}원 [합계] ${total.toLocaleString()}원`;
+  document.getElementById("eatsHistoryList").prepend(item);
+  refreshCalendars();
+  alert("✅ 등록 완료!");
+};
+
+// ✅ 쿠팡/배민 삭제
+document.getElementById("deleteEats").onclick=async()=>{
+  const target=window["eats-calendarSel"];
+  if(!target){alert("🗓️ 삭제할 날짜를 선택해주세요 !");return;}
+  const day=target.dataset.daynum;
+  const dateText=`${new Date().getFullYear()}-${new Date().getMonth()+1}-${day}`;
+
+  // Firestore에서 삭제
+  for (let col of ["쿠팡✅","배민✅"]) {
+    const q=query(collection(db,col),where("등록_날짜","==",dateText));
+    const snap=await getDocs(q);
+    snap.forEach(async(docu)=>await deleteDoc(doc(db,col,docu.id)));
+  }
+
+  eatsData=eatsData.filter(e=>e.day!=day);
+  document.querySelectorAll(`#eatsHistoryList .history-item`).forEach(i=>{if(i.dataset.day==day)i.remove();});
+  refreshCalendars();
+  alert("🧹 해당 날짜 수익이 삭제되었습니다!");
+};
+
+// ✅ 추가 수익 등록
+document.getElementById("addIncome").onclick=async()=>{
+  const target=window["income-calendarSel"];
+  if(!target){alert("📅 날짜를 선택해주세요.");return;}
+  const day=target.dataset.daynum;
+  const amount=parseInt(document.getElementById("incomeAmount").value)||0;
+  const reason=document.getElementById("incomeReason").value||"";
+  const dateText=`${new Date().getFullYear()}-${new Date().getMonth()+1}-${day}`;
+  await addDoc(collection(db,"추가수익✅"),{등록_날짜:dateText,금액:amount,원천_사유:reason});
+  incomeData.push({day,amount,reason});
+  const item=document.createElement("div");
+  item.classList.add("history-item");item.dataset.day=day;
+  item.innerText=`📅 ${day}일 | ${amount.toLocaleString()}원 (${reason})`;
+  document.getElementById("historyList").prepend(item);
+  refreshCalendars();
+  alert("✅ 추가 완료!");
+};
+
+// ✅ 추가 수익 삭제
+document.getElementById("deleteIncome").onclick=async()=>{
+  const target=window["income-calendarSel"];
+  if(!target){alert("🗓️ 삭제할 날짜를 선택해주세요 !");return;}
+  const day=target.dataset.daynum;
+  const dateText=`${new Date().getFullYear()}-${new Date().getMonth()+1}-${day}`;
+  const q=query(collection(db,"추가수익✅"),where("등록_날짜","==",dateText));
+  const snap=await getDocs(q);
+  snap.forEach(async(docu)=>await deleteDoc(doc(db,"추가수익✅",docu.id)));
+  incomeData=incomeData.filter(e=>e.day!=day);
+  document.querySelectorAll(`#historyList .history-item`).forEach(i=>{if(i.dataset.day==day)i.remove();});
+  refreshCalendars();
+  alert("🧹 해당 날짜 추가수익이 삭제되었습니다!");
+};
 </script>
+
 </body>
 </html>
