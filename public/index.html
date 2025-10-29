@@ -1,177 +1,184 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>수입 기록 전용 사이트 🍀</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>수입 기록 전용 사이트 🍀</title>
 
-<style>
-body {
-  margin: 0;
-  font-family: Pretendard, sans-serif;
-  background: #fdfdfd;
-  color: #333;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 100vh;
-}
-header {
-  width: 100%;
-  text-align: center;
-  font-size: 22px;
-  font-weight: 700;
-  color: #00b894;
-  padding: 20px 0;
-  border-bottom: 1px solid #eee;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  cursor: pointer;
-}
-.page {
-  display: none;
-  width: 92%;
-  max-width: 450px;
-  margin-top: 30px;
-  text-align: center;
-}
-.card {
-  width: 100%;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-  text-align: center;
-  padding: 18px 0;
-  font-weight: 600;
-  margin-bottom: 15px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-.card:hover { transform: translateY(-3px); }
-.card.green { background: #00b894; color: #fff; }
-.card.white { background: #fff; color: #00b894; border: 1px solid #00b894; }
-footer {
-  width: 100%;
-  text-align: center;
-  font-weight: 600;
-  font-size: 16px;
-  color: #00b894;
-  padding: 15px 0;
-  border-top: 1px solid #eee;
-  background: #fafafa;
-}
-.back-btn {
-  background: none;
-  color: #00b894;
-  border: 1px solid #00b894;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-weight: 600;
-  margin-bottom: 20px;
-  cursor: pointer;
-}
-.calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-top: 20px;
-}
-.day {
-  border: 1px solid #eee;
-  border-radius: 10px;
-  min-height: 70px;
-  padding: 6px;
-  font-size: 12px;
-  text-align: center;
-  background: #fff;
-  transition: 0.15s;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-.day:hover { border-color: #00b894; }
-.day.selected { border: 2px solid #00b894; background: #e9fff7; }
-.day .date { font-weight: 600; font-size: 13px; margin-bottom: 3px; }
-.income { font-size: 12px; color: #00b894; font-weight: 600; white-space: pre-line; line-height: 1.4em; }
-.added { color: #ff0000; }
-input {
-  width: 92%;
-  max-width: 380px;
-  padding: 11px;
-  border: 1px solid #ccc;
-  border-radius: 12px;
-  margin-bottom: 10px;
-  font-size: 15px;
-  text-align: center;
-  background: #fff;
-}
-.history {
-  margin-top: 25px;
-  background: #f9f9f9;
-  border: 1px solid #eee;
-  border-radius: 12px;
-  padding: 10px;
-  max-height: 180px;
-  overflow-y: auto;
-}
-.history h3 {
-  margin: 0 0 10px 0;
-  color: #00b894;
-  font-size: 15px;
-}
-.history-item {
-  font-size: 13px;
-  margin-bottom: 8px;
-  line-height: 1.4em;
-  border-bottom: 1px dashed #ddd;
-  padding-bottom: 5px;
-}
-</style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js" type="module"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js" type="module"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Pretendard, sans-serif;
+      background: #fdfdfd;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      width: 100%;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #00b894;
+      padding: 20px 0;
+      border-bottom: 1px solid #eee;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      position: relative;
+      z-index: 1;
+      cursor: pointer;
+    }
+    .page {
+      display: none;
+      width: 92%;
+      max-width: 450px;
+      margin-top: 30px;
+      text-align: center;
+    }
+    .card {
+      width: 100%;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+      text-align: center;
+      padding: 18px 0;
+      font-weight: 600;
+      margin-bottom: 15px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .card:hover { transform: translateY(-3px); }
+    .card.green { background: #00b894; color: #fff; }
+    .card.white { background: #fff; color: #00b894; border: 1px solid #00b894; }
+    footer {
+      width: 100%;
+      text-align: center;
+      font-weight: 600;
+      font-size: 16px;
+      color: #00b894;
+      padding: 15px 0;
+      border-top: 1px solid #eee;
+      background: #fafafa;
+    }
+    .back-btn {
+      background: none;
+      color: #00b894;
+      border: 1px solid #00b894;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-top: 20px;
+    }
+    .day {
+      border: 1px solid #eee;
+      border-radius: 10px;
+      min-height: 70px;
+      padding: 6px;
+      font-size: 12px;
+      text-align: center;
+      background: #fff;
+      transition: 0.15s;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .day:hover { border-color: #00b894; }
+    .day.selected { border: 2px solid #00b894; background: #e9fff7; }
+    .day .date { font-weight: 600; font-size: 13px; margin-bottom: 3px; }
+    .income { font-size: 12px; color: #00b894; font-weight: 600; white-space: pre-line; line-height: 1.4em; }
+    .added { color: #ff0000; }
+    input {
+      width: 92%;
+      max-width: 380px;
+      padding: 11px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      font-size: 15px;
+      text-align: center;
+      background: #fff;
+    }
+    .history {
+      margin-top: 25px;
+      background: #f9f9f9;
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 10px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .history h3 {
+      margin: 0 0 10px 0;
+      color: #00b894;
+      font-size: 15px;
+    }
+    .history-item {
+      font-size: 13px;
+      margin-bottom: 8px;
+      line-height: 1.4em;
+      border-bottom: 1px dashed #ddd;
+      padding-bottom: 5px;
+    }
+  </style>
 </head>
 <body>
 
-<header onclick="showPage('page-home')">수입 기록 전용 사이트 🍀</header>
+  <header onclick="showPage('page-home')">수입 기록 전용 사이트 🍀</header>
 
-<!-- 홈 -->
-<div class="page" id="page-home" style="display:block;">
-  <img src="cloud.png" style="width:230px;margin-bottom:20px;">
-  <div class="card green" onclick="showPage('page-eats')">쿠팡이츠 / 배민커넥트</div>
-  <div class="card white" onclick="showPage('page-register')">새로운 수익 등록</div>
-</div>
-
-<!-- 쿠팡/배민 -->
-<div class="page" id="page-eats">
-  <button class="back-btn" onclick="showPage('page-home')">← 돌아가기</button>
-  <h2>📊 쿠팡이츠 / 배민커넥트 수익</h2>
-  <input id="eats" type="number" placeholder="쿠팡이츠 금액 (원)">
-  <input id="baemin" type="number" placeholder="배민커넥트 금액 (원)">
-  <div style="display:flex;gap:10px;justify-content:center;">
-    <button class="card green" id="saveEats">등록</button>
-    <button class="card white" id="deleteEats">삭제</button>
+  <!-- 홈 -->
+  <div class="page" id="page-home" style="display:block;">
+    <img src="cloud.png" style="width:230px;margin-bottom:20px;">
+    <div class="card green" onclick="showPage('page-eats')">쿠팡이츠 / 배민커넥트</div>
+    <div class="card white" onclick="showPage('page-register')">새로운 수익 등록</div>
   </div>
-  <div class="calendar" id="eats-calendar"></div>
-  <div class="history"><h3>📜 등록 히스토리</h3><div id="eatsHistoryList"></div></div>
-</div>
 
-<!-- 추가 수익 -->
-<div class="page" id="page-register">
-  <button class="back-btn" onclick="showPage('page-home')">← 돌아가기</button>
-  <h2 style="color:#00b894;">✨ 새로운 수익 등록</h2>
-  <input id="incomeAmount" type="number" placeholder="금액 (원) 💰">
-  <input id="incomeReason" type="text" placeholder="원천 / 사유 🧾">
-  <div class="calendar" id="income-calendar"></div>
-  <div style="display:flex;gap:10px;justify-content:center;">
-    <button class="card green" id="addIncome">등록</button>
-    <button class="card white" id="deleteIncome">삭제</button>
+  <!-- 쿠팡/배민 -->
+  <div class="page" id="page-eats">
+    <button class="back-btn" onclick="showPage('page-home')">← 돌아가기</button>
+    <h2>📊 쿠팡이츠 / 배민커넥트 수익</h2>
+    <input id="eats" type="number" placeholder="쿠팡이츠 금액 (원)">
+    <input id="baemin" type="number" placeholder="배민커넥트 금액 (원)">
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="card green" id="saveEats">등록</button>
+      <button class="card white" id="deleteEats">삭제</button>
+    </div>
+    <div class="calendar" id="eats-calendar"></div>
+    <div class="history"><h3>📜 등록 히스토리</h3><div id="eatsHistoryList"></div></div>
   </div>
-  <div class="history"><h3>📜 수익 등록 히스토리</h3><div id="historyList"></div></div>
-</div>
 
-<footer>이번 달 합계 : <span id="monthTotal">0</span>원 💰</footer>
+  <!-- 추가 수익 -->
+  <div class="page" id="page-register">
+    <button class="back-btn" onclick="showPage('page-home')">← 돌아가기</button>
+    <h2 style="color:#00b894;">✨ 새로운 수익 등록</h2>
+    <input id="incomeAmount" type="number" placeholder="금액 (원) 💰">
+    <input id="incomeReason" type="text" placeholder="원천 / 사유 🧾">
+    <div class="calendar" id="income-calendar"></div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="card green" id="addIncome">등록</button>
+      <button class="card white" id="deleteIncome">삭제</button>
+    </div>
+    <div class="history"><h3>📜 수익 등록 히스토리</h3><div id="historyList"></div></div>
+  </div>
 
-<!-- ✅ JS 외부 파일 연결 -->
-<script type="module" src="app.js"></script>
+  <footer>이번 달 합계 : <span id="monthTotal">0</span>원 💰</footer>
+
+  <!-- ✅ JS는 HTML이 다 로드된 후 실행되게 defer로 로드 -->
+  <script type="module" src="app.js" defer></script>
 
 </body>
 </html>
