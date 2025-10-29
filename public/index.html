@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>수입 기록 전용 사이트 🍀</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <style>
+/* --- 민규 원본 디자인 그대로 --- */
 body {
   margin: 0;
   font-family: Pretendard, sans-serif;
@@ -40,6 +42,7 @@ header {
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+  text-align: center;
   padding: 18px 0;
   font-weight: 600;
   margin-bottom: 15px;
@@ -83,7 +86,9 @@ footer {
   min-height: 70px;
   padding: 6px;
   font-size: 12px;
+  text-align: center;
   background: #fff;
+  transition: 0.15s;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -92,7 +97,47 @@ footer {
 .day:hover { border-color: #00b894; }
 .day.selected { border: 2px solid #00b894; background: #e9fff7; }
 .day .date { font-weight: 600; font-size: 13px; margin-bottom: 3px; }
-.income { font-size: 12px; color: #00b894; font-weight: 600; line-height: 1.4em; }
+.income { font-size: 12px; color: #00b894; font-weight: 600; white-space: pre-line; line-height: 1.4em; }
+.added { color: #ff0000; }
+input {
+  width: 92%;
+  max-width: 380px;
+  padding: 11px;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  font-size: 15px;
+  text-align: center;
+  background: #fff;
+  transition: 0.2s;
+}
+input:focus {
+  outline: none;
+  border: 1px solid #00b894;
+  box-shadow: 0 0 4px rgba(0, 184, 148, 0.3);
+}
+.history {
+  margin-top: 25px;
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 10px;
+  max-height: 180px;
+  overflow-y: auto;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+.history h3 {
+  margin: 0 0 10px 0;
+  color: #00b894;
+  font-size: 15px;
+}
+.history-item {
+  font-size: 13px;
+  margin-bottom: 8px;
+  line-height: 1.4em;
+  border-bottom: 1px dashed #ddd;
+  padding-bottom: 5px;
+}
 </style>
 </head>
 <body>
@@ -118,7 +163,7 @@ footer {
     <button class="card white" id="deleteEats">삭제</button>
   </div>
   <div class="calendar" id="eats-calendar"></div>
-  <div class="history" id="eats-history"><h3>📜 등록 히스토리</h3><div id="eatsHistoryList"></div></div>
+  <div class="history"><h3>📜 등록 히스토리</h3><div id="eatsHistoryList"></div></div>
 </div>
 
 <!-- 새로운 수익 등록 -->
@@ -132,7 +177,7 @@ footer {
     <button class="card green" id="addIncome">등록</button>
     <button class="card white" id="deleteIncome">삭제</button>
   </div>
-  <div class="history" id="income-history"><h3>📜 수익 등록 히스토리</h3><div id="historyList"></div></div>
+  <div class="history"><h3>📜 수익 등록 히스토리</h3><div id="historyList"></div></div>
 </div>
 
 <!-- 엑셀 -->
@@ -140,27 +185,34 @@ footer {
   <button class="back-btn" onclick="showPage('page-home')">← 돌아가기</button>
   <h2>📥 월별 엑셀 다운로드</h2>
   <div class="calendar" id="excel-calendar"></div>
-  <div class="history" id="excel-history"><h3>📜 엑셀 저장 히스토리</h3><div id="excelHistoryLog">아직 저장된 기록이 없습니다.</div></div>
-  <div style="display:flex;gap:10px;justify-content:center;margin-top:15px;">
-    <button class="card gray" id="downloadExcel">엑셀 파일 다운로드</button>
-    <button class="card white" id="deleteExcel">모든 데이터 초기화</button>
-  </div>
+  <div class="history"><h3>📜 엑셀 저장 히스토리</h3><div id="excelHistoryLog">아직 저장된 기록이 없습니다.</div></div>
 </div>
 
 <footer>이번 달 합계 : <span id="monthTotal">0</span>원 💰</footer>
 
-<script>
+<!-- ✅ Firebase 연동 -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC_JssdYuI3Lq8CUJibU2ex9cPRTlJWFSw",
+  authDomain: "income-site-89fcf.firebaseapp.com",
+  projectId: "income-site-89fcf",
+  storageBucket: "income-site-89fcf.firebasestorage.app",
+  messagingSenderId: "645854803885",
+  appId: "1:645854803885:web:1771b066b5b3f9e12d1324"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.style.display='none');
   document.getElementById(id).style.display='block';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
-let eatsData=[],incomeData=[];
 
 function makeCalendar(id){
   const cal=document.getElementById(id);
-  cal.innerHTML='';
   for(let i=1;i<=31;i++){
     const d=document.createElement('div');
     d.classList.add('day');
@@ -174,46 +226,51 @@ makeCalendar("eats-calendar");
 makeCalendar("income-calendar");
 makeCalendar("excel-calendar");
 
-// 등록
-document.getElementById("saveEats").onclick=()=>{
+async function loadData(){
+  const eatsSnap = await getDocs(collection(db, "eatsData"));
+  eatsSnap.forEach(docSnap=>{
+    const data=docSnap.data();
+    addHistoryItem("eatsHistoryList",`📅 ${data.day}일 | [합계] ${data.amount.toLocaleString()}원`);
+  });
+
+  const incomeSnap = await getDocs(collection(db, "incomeData"));
+  incomeSnap.forEach(docSnap=>{
+    const data=docSnap.data();
+    addHistoryItem("historyList",`📅 ${data.day}일 | ${data.amount.toLocaleString()}원 (${data.reason})`);
+  });
+}
+
+function addHistoryItem(id,text){
+  const item=document.createElement("div");
+  item.classList.add("history-item");
+  item.innerText=text;
+  document.getElementById(id).prepend(item);
+}
+
+document.getElementById("saveEats").onclick=async()=>{
   const target=window["eats-calendarSel"];
   if(!target){alert("📅 날짜를 먼저 선택해주세요!");return;}
   const day=target.dataset.daynum;
   const eats=document.getElementById("eats").value||0;
   const bae=document.getElementById("baemin").value||0;
   const total=Number(eats)+Number(bae);
-  eatsData.push({day,amount:total});
+  await addDoc(collection(db,"eatsData"),{day,amount:total});
+  addHistoryItem("eatsHistoryList",`📅 ${day}일 | [합계] ${total.toLocaleString()}원`);
   alert("✅ 등록 완료!");
 };
 
-// 삭제
-document.getElementById("deleteEats").onclick=()=>{
-  const target=window["eats-calendarSel"];
-  if(!target){alert("🗓️ 삭제할 날짜를 선택해주세요!");return;}
+document.getElementById("addIncome").onclick=async()=>{
+  const target=window["income-calendarSel"];
+  if(!target){alert("📅 날짜를 선택해주세요!");return;}
   const day=target.dataset.daynum;
-  eatsData=eatsData.filter(e=>e.day!=day);
-  alert("🧹 삭제 완료!");
+  const amount=Number(document.getElementById("incomeAmount").value||0);
+  const reason=document.getElementById("incomeReason").value||"";
+  await addDoc(collection(db,"incomeData"),{day,amount,reason});
+  addHistoryItem("historyList",`📅 ${day}일 | ${amount.toLocaleString()}원 (${reason})`);
+  alert("✅ 추가 완료!");
 };
+
+loadData();
 </script>
-
-<!-- ✅ Firebase 연결 -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyC_JssdYuI3Lq8CUJibU2ex9cPRTlJWFSw",
-    authDomain: "income-site-89fcf.firebaseapp.com",
-    projectId: "income-site-89fcf",
-    storageBucket: "income-site-89fcf.firebasestorage.app",
-    messagingSenderId: "645854803885",
-    appId: "1:645854803885:web:1771b066b5b3f9e12d1324"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  console.log("✅ Firebase 연결 성공:", db);
-</script>
-
 </body>
 </html>
