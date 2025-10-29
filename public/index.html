@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>수입 기록 전용 사이트 🍀</title>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js" type="module"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js" type="module"></script>
-
+  <!-- ✅ Firebase 중복 불러오기 제거 완료 -->
   <style>
     body {
       margin: 0;
@@ -177,7 +174,7 @@
 
   <footer>이번 달 합계 : <span id="monthTotal">0</span>원 💰</footer>
 
-  <!-- ✅ JS는 HTML이 다 로드된 후 실행되게 defer로 로드 -->
+  <!-- ✅ 이제 app.js만 로드 -->
   <script type="module" src="app.js" defer></script>
 
 </body>
