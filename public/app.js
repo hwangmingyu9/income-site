@@ -17,14 +17,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ✅ 연도 / 월 컬렉션 자동생성
-const now = new Date();
-const yearName = `${now.getFullYear()}년✅`;
-const monthName = `${now.getMonth() + 1}월✅`;
+// ✅ 동적 컬렉션 생성
+function getRefs(day) {
+  const now = new Date();
+  const yearName = `${now.getFullYear()}년✔️`;
+  const monthName = `${now.getMonth() + 1}월✔️`;
+  const dayName = `${day}일✔️`;
 
-const coupangRef = collection(db, `${yearName}/${monthName}/쿠팡✅`);
-const baeminRef = collection(db, `${yearName}/${monthName}/배민✅`);
-const extraRef = collection(db, `${yearName}/${monthName}/추가수익✅`);
+  return {
+    coupangRef: collection(db, `${yearName}/${monthName}/${dayName}/쿠팡✔️`),
+    baeminRef: collection(db, `${yearName}/${monthName}/${dayName}/배민✔️`),
+    extraRef: collection(db, `${yearName}/${monthName}/추가수익✔️`)
+  };
+}
 
 // ✅ 페이지 전환
 window.showPage = function (id) {
@@ -33,12 +38,7 @@ window.showPage = function (id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
-// ✅ 데이터 캐시
-let coupangData = [];
-let baeminData = [];
-let extraData = [];
-
-// ✅ 달력 생성
+// ✅ 달력 만들기
 function makeCalendar(id) {
   const cal = document.getElementById(id);
   cal.innerHTML = "";
@@ -58,115 +58,21 @@ function makeCalendar(id) {
 makeCalendar("eats-calendar");
 makeCalendar("income-calendar");
 
-// ✅ 실시간 반영
-onSnapshot(coupangRef, snap => {
-  coupangData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  updateUI();
-});
-onSnapshot(baeminRef, snap => {
-  baeminData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  updateUI();
-});
-onSnapshot(extraRef, snap => {
-  extraData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  updateUI();
-});
-
-// ✅ UI 갱신
-function updateUI() {
-  const eatsList = document.getElementById("eatsHistoryList");
-  const incomeList = document.getElementById("historyList");
-  eatsList.innerHTML = "";
-  incomeList.innerHTML = "";
-
-  const combinedDays = {};
-
-  // 쿠팡
-  coupangData.forEach(e => {
-    const d = e["등록_날짜"];
-    if (!d) return;
-    const day = d.split("-")[2];
-    combinedDays[day] = combinedDays[day] || { coupang: 0, baemin: 0, extra: 0 };
-    combinedDays[day].coupang = parseInt(e["금액"].replace(/[^\d]/g, "")) || 0;
-  });
-
-  // 배민
-  baeminData.forEach(e => {
-    const d = e["등록_날짜"];
-    if (!d) return;
-    const day = d.split("-")[2];
-    combinedDays[day] = combinedDays[day] || { coupang: 0, baemin: 0, extra: 0 };
-    combinedDays[day].baemin = parseInt(e["금액"].replace(/[^\d]/g, "")) || 0;
-  });
-
-  // 추가 수익
-  extraData.forEach(e => {
-    const d = e["등록_날짜"];
-    if (!d) return;
-    const day = d.split("-")[2];
-    combinedDays[day] = combinedDays[day] || { coupang: 0, baemin: 0, extra: 0 };
-    combinedDays[day].extra += parseInt(e["금액"].replace(/[^\d]/g, "")) || 0;
-  });
-
-  // 히스토리
-  Object.keys(combinedDays).forEach(day => {
-    const c = combinedDays[day].coupang || 0;
-    const b = combinedDays[day].baemin || 0;
-    const total = c + b;
-    if (total > 0) {
-      const div = document.createElement("div");
-      div.classList.add("history-item");
-      div.innerText = `📅 ${day}일 | [쿠팡이츠] ${c.toLocaleString()}원 [배민커넥트] ${b.toLocaleString()}원 [합계] ${total.toLocaleString()}원`;
-      eatsList.appendChild(div);
-    }
-  });
-
-  extraData.forEach(e => {
-    const d = e["등록_날짜"];
-    if (!d) return;
-    const day = d.split("-")[2];
-    const div = document.createElement("div");
-    div.classList.add("history-item");
-    div.innerText = `📅 ${day}일 | ${e["금액"]} (${e["원천_사유"] || "-"})`;
-    incomeList.appendChild(div);
-  });
-
-  // 달력 갱신
-  makeCalendar("eats-calendar");
-  makeCalendar("income-calendar");
-
-  Object.keys(combinedDays).forEach(day => {
-    const c = combinedDays[day].coupang || 0;
-    const b = combinedDays[day].baemin || 0;
-    const e = combinedDays[day].extra || 0;
-    const html = `
-      <div class='date'>${day}</div>
-      ${c || b ? `<div class='income'>${(c + b).toLocaleString()}원</div>` : ""}
-      ${e ? `<div class='income added'>[추가] ${e.toLocaleString()}원</div>` : ""}
-    `;
-    const eatCell = document.querySelector(`#eats-calendar .day[data-daynum="${day}"]`);
-    const incomeCell = document.querySelector(`#income-calendar .day[data-daynum="${day}"]`);
-    if (eatCell) eatCell.innerHTML = html;
-    if (incomeCell) incomeCell.innerHTML = html;
-  });
-
-  const totalAll = Object.values(combinedDays)
-    .reduce((a, b) => a + b.coupang + b.baemin + b.extra, 0);
-  document.getElementById("monthTotal").innerText = totalAll.toLocaleString();
-}
-
 // ✅ 쿠팡/배민 등록
 document.getElementById("saveEats").onclick = async () => {
   const sel = window["eats-calendarSel"];
   if (!sel) return alert("📅 날짜를 먼저 선택해주세요!");
   const day = Number(sel.dataset.daynum);
+  const { coupangRef, baeminRef } = getRefs(day);
+
   const eats = document.getElementById("eats").value.trim();
   const bae = document.getElementById("baemin").value.trim();
   if (!eats || !bae) return alert("💬 등록하실 금액을 모두 입력 해주세요!");
 
-  const dateText = `${now.getFullYear()}-${now.getMonth() + 1}-${day}`;
-  const exists = coupangData.some(e => e["등록_날짜"] === dateText) || baeminData.some(e => e["등록_날짜"] === dateText);
-  if (exists) return alert("⚠️ 이미 등록된 날짜입니다 삭제후 시도 해주세요!");
+  const dateText = `${new Date().getFullYear()}-${new Date().getMonth() + 1}-${day}`;
+  const existsC = await getDocs(query(coupangRef, where("등록_날짜", "==", dateText)));
+  const existsB = await getDocs(query(baeminRef, where("등록_날짜", "==", dateText)));
+  if (!existsC.empty || !existsB.empty) return alert("⚠️ 이미 등록된 날짜입니다 삭제후 시도 해주세요!");
 
   const eatsVal = Number(eats).toLocaleString() + "원";
   const baeVal = Number(bae).toLocaleString() + "원";
@@ -181,13 +87,16 @@ document.getElementById("deleteEats").onclick = async () => {
   const sel = window["eats-calendarSel"];
   if (!sel) return alert("🗓️ 삭제할 날짜를 선택해주세요 !");
   const day = Number(sel.dataset.daynum);
-  const dateText = `${now.getFullYear()}-${now.getMonth() + 1}-${day}`;
+  const { coupangRef, baeminRef } = getRefs(day);
 
+  const dateText = `${new Date().getFullYear()}-${new Date().getMonth() + 1}-${day}`;
   const delTargets = [];
+
   const coupangSnap = await getDocs(query(coupangRef, where("등록_날짜", "==", dateText)));
-  coupangSnap.forEach(d => delTargets.push(doc(db, `${yearName}/${monthName}/쿠팡✅`, d.id)));
+  coupangSnap.forEach(d => delTargets.push(doc(db, coupangRef.path, d.id)));
+
   const baeminSnap = await getDocs(query(baeminRef, where("등록_날짜", "==", dateText)));
-  baeminSnap.forEach(d => delTargets.push(doc(db, `${yearName}/${monthName}/배민✅`, d.id)));
+  baeminSnap.forEach(d => delTargets.push(doc(db, baeminRef.path, d.id)));
 
   for (const t of delTargets) await deleteDoc(t);
   alert("🧹 삭제 완료!");
@@ -198,11 +107,13 @@ document.getElementById("addIncome").onclick = async () => {
   const sel = window["income-calendarSel"];
   if (!sel) return alert("📅 날짜를 먼저 선택해주세요!");
   const day = Number(sel.dataset.daynum);
+  const { extraRef } = getRefs(day);
+
   const amount = document.getElementById("incomeAmount").value.trim();
   const reason = document.getElementById("incomeReason").value.trim();
   if (!amount || !reason) return alert("💬 금액과 사유를 모두 입력해주세요!");
 
-  const dateText = `${now.getFullYear()}-${now.getMonth() + 1}-${day}`;
+  const dateText = `${new Date().getFullYear()}-${new Date().getMonth() + 1}-${day}`;
   const amountStr = Number(amount).toLocaleString() + "원";
 
   await addDoc(extraRef, { 등록_날짜: dateText, 금액: amountStr, 원천_사유: reason });
@@ -214,8 +125,10 @@ document.getElementById("deleteIncome").onclick = async () => {
   const sel = window["income-calendarSel"];
   if (!sel) return alert("🗓️ 삭제할 날짜를 선택해주세요 !");
   const day = Number(sel.dataset.daynum);
-  const dateText = `${now.getFullYear()}-${now.getMonth() + 1}-${day}`;
+  const { extraRef } = getRefs(day);
+  const dateText = `${new Date().getFullYear()}-${new Date().getMonth() + 1}-${day}`;
+
   const snap = await getDocs(query(extraRef, where("등록_날짜", "==", dateText)));
-  snap.forEach(async (d) => await deleteDoc(doc(db, `${yearName}/${monthName}/추가수익✅`, d.id)));
+  snap.forEach(async (d) => await deleteDoc(doc(db, extraRef.path, d.id)));
   alert("🧹 해당 날짜 추가 수익 삭제 완료!");
 };
