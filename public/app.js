@@ -19,7 +19,7 @@ const db = getFirestore(app);
 // ✅ 날짜 기반 컬렉션 자동 설정
 const now = new Date();
 const year = now.getFullYear() + "년✅";
-const month = (now.getMonth() + 1) + "월"; // ✅ ✅ 제거함
+const month = (now.getMonth() + 1) + "월✅"; // ✅ 복원됨
 const coupangRef = collection(db, `${year}/${month}/쿠팡✅`);
 const baeminRef = collection(db, `${year}/${month}/배민✅`);
 const extraRef = collection(db, `${year}/${month}/추가수익✅`);
