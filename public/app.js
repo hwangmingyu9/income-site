@@ -1,7 +1,7 @@
 // ✅ Firebase SDK import
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, collection, doc, setDoc, addDoc, deleteDoc, getDocs,
+  getFirestore, collection, doc, setDoc, deleteDoc, getDocs,
   query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -24,7 +24,7 @@ window.showPage = function (id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
-// ✅ 컬렉션 구조 자동 생성
+// ✅ 현재 년/월 기반 컬렉션 경로 자동 생성
 function getCollections() {
   const now = new Date();
   const year = `${now.getFullYear()}년✅`;
@@ -62,7 +62,7 @@ function makeCalendar(id) {
 makeCalendar("eats-calendar");
 makeCalendar("income-calendar");
 
-// ✅ 데이터 로드
+// ✅ 실시간 반영
 function loadData() {
   const { coupangRef, baeminRef, extraRef } = getCollections();
   onSnapshot(coupangRef, snap => { coupangData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })); updateUI(); });
@@ -104,7 +104,7 @@ function updateUI() {
     combinedDays[day].extra += parseInt(e["금액"].replace(/[^\d]/g, "")) || 0;
   });
 
-  // 히스토리
+  // 히스토리 표시
   Object.keys(combinedDays).forEach(day => {
     const c = combinedDays[day].coupang;
     const b = combinedDays[day].baemin;
@@ -117,7 +117,7 @@ function updateUI() {
     }
   });
 
-  // 추가수익 히스토리
+  // 추가 수익 히스토리
   extraData.forEach(e => {
     const d = e["등록_날짜"];
     const day = d.split("-")[2];
@@ -127,9 +127,9 @@ function updateUI() {
     incomeList.appendChild(div);
   });
 
+  // 달력 표시
   makeCalendar("eats-calendar");
   makeCalendar("income-calendar");
-
   Object.keys(combinedDays).forEach(day => {
     const c = combinedDays[day].coupang;
     const b = combinedDays[day].baemin;
@@ -163,7 +163,7 @@ document.getElementById("saveEats").onclick = async () => {
   const year = new Date().getFullYear();
   const month = new Date().getMonth() + 1;
   const dateText = `${year}-${month}-${day}`;
-  const docId = dateText; // 날짜를 문서ID로 저장
+  const docId = dateText;
 
   const eatsVal = Number(eats).toLocaleString() + "원";
   const baeVal = Number(bae).toLocaleString() + "원";
@@ -182,13 +182,56 @@ document.getElementById("saveEats").onclick = async () => {
 
   const totalSum = Number(eats) + Number(bae) + Number(extraVal);
   await setDoc(doc(totalRef, docId), {
-    배민커넥트: baeVal,
-    쿠팡이츠: eatsVal,
-    추가_수입: extraVal ? extraVal.toLocaleString() + "원" : "-",
-    원천_사유: reasonTxt || "-",
-    전체_합계: totalSum.toLocaleString() + "원",
-    등록_날짜: dateText
+    "01_배민커넥트": baeVal,
+    "02_쿠팡이츠": eatsVal,
+    "03_추가_수입": extraVal ? extraVal.toLocaleString() + "원" : "-",
+    "04_원천_사유": reasonTxt || "-",
+    "05_전체_합계": totalSum.toLocaleString() + "원",
+    "06_등록_날짜": dateText
   });
 
   alert("✅ 등록 및 합계 계산 완료!");
+};
+
+// ✅ 추가 수익 등록
+document.getElementById("addIncome").onclick = async () => {
+  const { extraRef, totalRef, coupangRef, baeminRef } = getCollections();
+  const sel = window["income-calendarSel"];
+  if (!sel) return alert("📅 날짜를 먼저 선택해주세요!");
+  const day = Number(sel.dataset.daynum);
+  const amount = document.getElementById("incomeAmount").value.trim();
+  const reason = document.getElementById("incomeReason").value.trim();
+  if (!amount || !reason) return alert("💬 금액과 사유를 모두 입력해주세요!");
+
+  const year = new Date().getFullYear();
+  const month = new Date().getMonth() + 1;
+  const dateText = `${year}-${month}-${day}`;
+  const docId = dateText;
+
+  const amountStr = Number(amount).toLocaleString() + "원";
+  await setDoc(doc(extraRef, docId), {
+    등록_날짜: dateText,
+    금액: amountStr,
+    원천_사유: reason
+  });
+
+  // ✅ 자동 합계 계산
+  const coupangSnap = await getDocs(query(coupangRef, where("등록_날짜", "==", dateText)));
+  const baeminSnap = await getDocs(query(baeminRef, where("등록_날짜", "==", dateText)));
+
+  let coupangVal = 0, baeminVal = 0;
+  coupangSnap.forEach(d => coupangVal += parseInt(d.data()["금액"].replace(/[^\d]/g, "")) || 0);
+  baeminSnap.forEach(d => baeminVal += parseInt(d.data()["금액"].replace(/[^\d]/g, "")) || 0);
+
+  const totalSum = coupangVal + baeminVal + Number(amount);
+  await setDoc(doc(totalRef, docId), {
+    "01_배민커넥트": baeminVal ? baeminVal.toLocaleString() + "원" : "-",
+    "02_쿠팡이츠": coupangVal ? coupangVal.toLocaleString() + "원" : "-",
+    "03_추가_수입": amountStr,
+    "04_원천_사유": reason,
+    "05_전체_합계": totalSum.toLocaleString() + "원",
+    "06_등록_날짜": dateText
+  });
+
+  alert("✅ 추가 수익 등록 및 합계 반영 완료!");
 };
