@@ -235,3 +235,59 @@ document.getElementById("addIncome").onclick = async () => {
 
   alert("✅ 추가 수익 등록 및 합계 반영 완료!");
 };
+
+// ✅ 쿠팡/배민 삭제
+document.getElementById("deleteEats").onclick = async () => {
+  const { coupangRef, baeminRef, totalRef } = getCollections();
+  const sel = window["eats-calendarSel"];
+  if (!sel) return alert("🗓️ 삭제할 날짜를 선택해주세요 !");
+  const day = Number(sel.dataset.daynum);
+  const dateText = `${new Date().getFullYear()}-${new Date().getMonth() + 1}-${day}`;
+
+  let deleted = false;
+
+  const coupangSnap = await getDocs(query(coupangRef, where("등록_날짜", "==", dateText)));
+  for (const d of coupangSnap.docs) {
+    await deleteDoc(doc(coupangRef, d.id));
+    deleted = true;
+  }
+
+  const baeminSnap = await getDocs(query(baeminRef, where("등록_날짜", "==", dateText)));
+  for (const d of baeminSnap.docs) {
+    await deleteDoc(doc(baeminRef, d.id));
+    deleted = true;
+  }
+
+  const totalSnap = await getDocs(query(totalRef, where("06_등록_날짜", "==", dateText)));
+  for (const d of totalSnap.docs) {
+    await deleteDoc(doc(totalRef, d.id));
+  }
+
+  if (deleted) alert("🧹 해당 날짜 수익이 삭제되었습니다!");
+  else alert("⚠️ 삭제할 데이터가 없습니다.");
+};
+
+// ✅ 추가 수익 삭제
+document.getElementById("deleteIncome").onclick = async () => {
+  const { extraRef, totalRef } = getCollections();
+  const sel = window["income-calendarSel"];
+  if (!sel) return alert("🗓️ 삭제할 날짜를 선택해주세요 !");
+  const day = Number(sel.dataset.daynum);
+  const dateText = `${new Date().getFullYear()}-${new Date().getMonth() + 1}-${day}`;
+
+  let deleted = false;
+
+  const snap = await getDocs(query(extraRef, where("등록_날짜", "==", dateText)));
+  for (const d of snap.docs) {
+    await deleteDoc(doc(extraRef, d.id));
+    deleted = true;
+  }
+
+  const totalSnap = await getDocs(query(totalRef, where("06_등록_날짜", "==", dateText)));
+  for (const d of totalSnap.docs) {
+    await deleteDoc(doc(totalRef, d.id));
+  }
+
+  if (deleted) alert("🧹 해당 날짜 추가 수익이 삭제되었습니다!");
+  else alert("⚠️ 삭제할 데이터가 없습니다.");
+};
